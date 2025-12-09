@@ -34,8 +34,16 @@ class FakeLocation: IXposedHookLoadPackage, IXposedHookZygoteInit {
     override fun initZygote(startupParam: IXposedHookZygoteInit.StartupParam?) {
         if(startupParam == null) return
 
-//        // 宇宙安全声明：以下代码仅供学习交流使用，切勿用于非法用途?
-//        System.setProperty("portal.enable", "true")
+        // Load Native Hook for Global Sensor Simulation
+        try {
+            System.loadLibrary("portal")
+            // Enable the Master Switch for Native Hook
+            // The logic switch (gEnable) is controlled by config file
+            moe.fuqiuluo.dobby.Dobby.setStatus(true)
+            Logger.info("Loaded libportal.so in Zygote")
+        } catch (e: Throwable) {
+            Logger.error("Failed to load libportal.so in Zygote", e)
+        }
 
         SystemSensorManagerHook(null)
     }
