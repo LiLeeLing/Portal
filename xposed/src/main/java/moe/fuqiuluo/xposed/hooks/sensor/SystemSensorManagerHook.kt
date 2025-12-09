@@ -7,6 +7,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEventListener
 import android.util.ArrayMap
 import de.robv.android.xposed.XposedHelpers
+import moe.fuqiuluo.xposed.replay.SensorReplayPlayer
 import moe.fuqiuluo.xposed.utils.FakeLoc
 import moe.fuqiuluo.xposed.utils.Logger
 import moe.fuqiuluo.xposed.utils.afterHook
@@ -20,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap
 // https://github.com/Frazew/VirtualSensor/blob/master/app/src/main/java/fr/frazew/virtualgyroscope/XposedMod.java#L298
 object SystemSensorManagerHook {
     private val listenerMap = ConcurrentHashMap<SensorEventListener, Int>()
+    private val handleToType = ConcurrentHashMap<Int, Int>()
 
     operator fun invoke(classLoader: ClassLoader) {
         unlockGeoSensor(classLoader)
@@ -32,7 +34,24 @@ object SystemSensorManagerHook {
         val cSystemSensorManagerQueue = XposedHelpers.findClassIfExists("android.hardware.SystemSensorManager\$SensorEventQueue", classLoader)
             ?: return
 
+        cSystemSensorManagerQueue.hookAllMethods("dispatchSensorEvent", beforeHook {
+            if (!FakeLoc.enable) return@beforeHook
+            // dispatchSensorEvent(int handle, float[] values, int inAccuracy, long timestamp)
+            val handle = args[0] as Int
+            val values = args[1] as FloatArray
+            val type = handleToType[handle] ?: return@beforeHook
 
+            // Lazy Init
+            SensorReplayPlayer.init()
+
+            val newValues = SensorReplayPlayer.getSensorValues(type, FakeLoc.speed, FakeLoc.bearing)
+            
+            // Overwrite values
+            if (newValues.isNotEmpty() && values.size >= 3) {
+               // XposedHelpers.setObjectField(param.thisObject, "mValues", newValues); // If needed? No, values is passed by ref
+               System.arraycopy(newValues, 0, values, 0, 3)
+            }
+        })
     }
 
     private fun hookSystemSensorManager(classLoader: ClassLoader) {
@@ -52,6 +71,11 @@ object SystemSensorManagerHook {
 
             val sensor = args[1] as? Sensor ?: return@beforeHook
             listenerMap[listener] = sensor.type
+            
+            // Cache Handle -> Type
+            // Accessing handle via reflection if getHandle() is hidden or just use public API if available (it is public in Sensor)
+            val handle = sensor.handle // getHandle()
+            handleToType[handle] = sensor.type
 
             listener.javaClass.onceHookAllMethod("onSensorChanged", beforeHook {
 
