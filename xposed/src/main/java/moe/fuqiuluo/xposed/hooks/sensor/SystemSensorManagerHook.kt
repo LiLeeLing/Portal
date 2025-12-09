@@ -35,8 +35,14 @@ object SystemSensorManagerHook {
             ?: return
 
         cSystemSensorManagerQueue.hookAllMethods("dispatchSensorEvent", beforeHook {
-            if (!FakeLoc.enable) return@beforeHook
             // dispatchSensorEvent(int handle, float[] values, int inAccuracy, long timestamp)
+            // Periodic config check (every 1s) to allow enabling from file
+            if (System.currentTimeMillis() % 1000 < 50) { 
+                 FakeLoc.readConfigFromFile()
+            }
+
+            if (!FakeLoc.enable) return@beforeHook
+            
             val handle = args[0] as Int
             val values = args[1] as FloatArray
             val type = handleToType[handle] ?: return@beforeHook

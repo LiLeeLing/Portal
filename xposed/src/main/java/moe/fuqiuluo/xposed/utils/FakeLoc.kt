@@ -214,7 +214,9 @@ object FakeLoc {
             if (json.has("enableMockGnss")) enableMockGnss = json.getBoolean("enableMockGnss")
 
         } catch (e: Exception) {
-            // Log?
+            if (enableDebugLog) {
+                Logger.error("Failed to read config from $CONFIG_FILE_PATH", e)
+            }
         }
     }
 }
