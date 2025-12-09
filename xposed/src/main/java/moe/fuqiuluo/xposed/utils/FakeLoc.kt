@@ -178,6 +178,9 @@ object FakeLoc {
             json.put("speedAmplitude", speedAmplitude)
             json.put("enableMockGnss", enableMockGnss)
             
+            // JNI Native Update
+            moe.fuqiuluo.xposed.FakeLocation.instance?.nativeUpdateConfig(enable, speed, bearing)
+            
             val file = java.io.File(CONFIG_FILE_PATH)
             file.writeText(json.toString())
             // Ensure world readable

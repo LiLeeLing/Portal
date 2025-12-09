@@ -33,6 +33,7 @@ class FakeLocation: IXposedHookLoadPackage, IXposedHookZygoteInit {
      * @throws Throwable everything is caught, but will prevent further initialization of the module.
      */
     override fun initZygote(startupParam: IXposedHookZygoteInit.StartupParam?) {
+        instance = this
         if(startupParam == null) return
 
         // Load Native Hook for Global Sensor Simulation
@@ -46,7 +47,7 @@ class FakeLocation: IXposedHookLoadPackage, IXposedHookZygoteInit {
             Logger.error("Failed to load libportal.so in Zygote", e)
         }
 
-        SystemSensorManagerHook(null)
+        // SystemSensorManagerHook(null)
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam?) {
@@ -135,4 +136,9 @@ class FakeLocation: IXposedHookLoadPackage, IXposedHookZygoteInit {
     }
 
     external fun nativeInitHook()
-}
+    external fun nativeUpdateConfig(enable: Boolean, speed: Double, bearing: Double)
+
+    companion object {
+        var instance: FakeLocation? = null
+    }
+

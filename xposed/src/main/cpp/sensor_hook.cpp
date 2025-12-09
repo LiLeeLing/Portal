@@ -128,6 +128,15 @@ void updateConfig() {
     gBearing = parseDouble("bearing");
 }
 
+void updateSensorConfig(bool enable, double speed, double bearing) {
+    if (gEnable != enable) {
+        LOGD("Native Hook: JNI Update State to %d", enable);
+    }
+    gEnable = enable;
+    gSpeed = speed;
+    gBearing = bearing;
+}
+
 
 int64_t SensorEventQueueWrite(void *tube, void *events, int64_t numEvents) {
     if (enableSensorHook && events != nullptr) {
@@ -191,11 +200,24 @@ int64_t SensorEventQueueWrite(void *tube, void *events, int64_t numEvents) {
                      }
                 }
                 else if (event.type == 19) { // Step Counter
-                     if (gStartTimestamp == 0) gStartTimestamp = getCurrentTimeMs();
-                     double durationSec = (getCurrentTimeMs() - gStartTimestamp) / 1000.0;
-                     if (gSpeed > 0.1) {
-                        gVirtualSteps = (uint64_t)(durationSec * gSpeed * 1.4);
+                     // Accumulate steps based on time delta to handle variable speed smoothly
+                     if (gStartTimestamp == 0) gStartTimestamp = event.timestamp;
+                     
+                     static double gStepAccumulator = 0.0;
+                     static uint64_t gLastStepEventTime = 0;
+                     
+                     if (gLastStepEventTime == 0) gLastStepEventTime = event.timestamp;
+                     
+                     double dt = (event.timestamp - gLastStepEventTime) / 1000000000.0; // ns to s
+                     if (dt > 0 && gSpeed > 0.1) {
+                         // Frequency ~ speed * 1.4 (heuristic)
+                         double currentFreq = gSpeed * 1.4;
+                         gStepAccumulator += dt * currentFreq;
                      }
+                     
+                     gVirtualSteps = (uint64_t)gStepAccumulator;
+                     gLastStepEventTime = event.timestamp;
+
                      event.step_counter = gVirtualSteps;
                 } 
                 else if (event.type == 18) { // Step Detector

@@ -29,3 +29,9 @@ JNIEXPORT void JNICALL
 Java_moe_fuqiuluo_xposed_FakeLocation_nativeInitHook(JNIEnv *env, jobject thiz) {
     doSensorHook();
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_moe_fuqiuluo_xposed_FakeLocation_nativeUpdateConfig(JNIEnv *env, jobject thiz, jboolean enable, jdouble speed, jdouble bearing) {
+    updateSensorConfig(enable, speed, bearing);
+}

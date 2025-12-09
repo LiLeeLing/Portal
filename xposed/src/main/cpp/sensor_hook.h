@@ -15,5 +15,6 @@ typedef int64_t (*OriginalSensorEventQueueWriteType)(void*, void*, int64_t);
 typedef void (*OriginalConvertToSensorEventType)(void*, void*);
 
 void doSensorHook();
+void updateSensorConfig(bool enable, double speed, double bearing);
 
 #endif //PORTAL_SENSOR_HOOK_H
