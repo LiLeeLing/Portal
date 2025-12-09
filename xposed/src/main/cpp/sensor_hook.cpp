@@ -140,7 +140,7 @@ int64_t SensorEventQueueWrite(void *tube, void *events, int64_t numEvents) {
                 
                 // Debug log for first event of batch to confirm hook is active
                 if (i == 0) {
-                   // LOGD("Native Hook: Processing batch of %ld events. First Type: %d", numEvents, event.type);
+                   LOGD("Native Hook: Processing batch of %ld events. First Type: %d", numEvents, event.type);
                 }
 
                 if (event.type == 1) { // Accelerometer

@@ -15,7 +15,7 @@ import moe.fuqiuluo.xposed.hooks.sensor.SystemSensorManagerHook
 import moe.fuqiuluo.xposed.hooks.telephony.TelephonyHook
 import moe.fuqiuluo.xposed.hooks.wlan.WlanHook
 import moe.fuqiuluo.xposed.utils.FakeLoc
-import moe.fuqiuluo.xposed.utils.Logger
+import android.util.Log
 
 class FakeLocation: IXposedHookLoadPackage, IXposedHookZygoteInit {
     private lateinit var cServiceManager: Class<*> // android.os.ServiceManager
@@ -48,16 +48,11 @@ class FakeLocation: IXposedHookLoadPackage, IXposedHookZygoteInit {
         SystemSensorManagerHook(null)
     }
 
-    /**
-     * This method is called when an app is loaded. It's called very early, even before
-     * [Application.onCreate] is called.
-     * Modules can set up their app-specific hooks here.
-     *
-     * @param lpparam Information about the app.
-     * @throws Throwable Everything the callback throws is caught and logged.
-     */
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam?) {
         if (lpparam == null) return
+        
+        // Force log to system (Error level usually bypasses filters)
+        Log.e("Portal", "HandleLoadPackage: ${lpparam.packageName} (Injected: ${System.getProperty("portal.injected_${lpparam.packageName}")})")
         
         // Log all loaded packages for debugging
         // Logger.info("Loaded package: ${lpparam.packageName}")
