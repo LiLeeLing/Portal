@@ -73,8 +73,8 @@ object SystemSensorManagerHook {
             listenerMap[listener] = sensor.type
             
             // Cache Handle -> Type
-            // Accessing handle via reflection if getHandle() is hidden or just use public API if available (it is public in Sensor)
-            val handle = sensor.handle // getHandle()
+            // Accessing handle via reflection if getHandle() is hidden
+            val handle = XposedHelpers.getIntField(sensor, "mHandle")
             handleToType[handle] = sensor.type
 
             listener.javaClass.onceHookAllMethod("onSensorChanged", beforeHook {
