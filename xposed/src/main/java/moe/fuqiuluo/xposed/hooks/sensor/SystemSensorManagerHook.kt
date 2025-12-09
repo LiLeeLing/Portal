@@ -23,14 +23,14 @@ object SystemSensorManagerHook {
     private val listenerMap = ConcurrentHashMap<SensorEventListener, Int>()
     private val handleToType = ConcurrentHashMap<Int, Int>()
 
-    operator fun invoke(classLoader: ClassLoader) {
+    operator fun invoke(classLoader: ClassLoader?) {
         unlockGeoSensor(classLoader)
 
         hookSystemSensorManager(classLoader)
         hookSystemSensorManagerQueue(classLoader)
     }
 
-    private fun hookSystemSensorManagerQueue(classLoader: ClassLoader) {
+    private fun hookSystemSensorManagerQueue(classLoader: ClassLoader?) {
         val cSystemSensorManagerQueue = XposedHelpers.findClassIfExists("android.hardware.SystemSensorManager\$SensorEventQueue", classLoader)
             ?: return
 
@@ -54,7 +54,7 @@ object SystemSensorManagerHook {
         })
     }
 
-    private fun hookSystemSensorManager(classLoader: ClassLoader) {
+    private fun hookSystemSensorManager(classLoader: ClassLoader?) {
         val cSystemSensorManager = XposedHelpers.findClassIfExists("android.hardware.SystemSensorManager", classLoader)
         if (cSystemSensorManager == null) {
             if (FakeLoc.enableDebugLog) {
@@ -115,7 +115,7 @@ object SystemSensorManagerHook {
         })
     }
 
-    private fun unlockGeoSensor(classLoader: ClassLoader) {
+    private fun unlockGeoSensor(classLoader: ClassLoader?) {
         val cSystemConfig = XposedHelpers.findClassIfExists("com.android.server.SystemConfig", classLoader)
             ?: return
 

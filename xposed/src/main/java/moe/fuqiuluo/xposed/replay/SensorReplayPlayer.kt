@@ -168,12 +168,27 @@ object SensorReplayPlayer {
      * @param currentHeading GPS Bearing (0-360). Used to rotate vectors.
      */
     fun getSensorValues(sensorType: Int, currentSpeed: Double, currentHeading: Double): FloatArray {
-        if (!isInitialized) return FloatArray(3)
-
-        val isMoving = currentSpeed > 0.5
-        val now = System.currentTimeMillis()
+        if (!isInitialized) return FloatArray(0)
 
         // State Machine Update
+        if (now - lastQueryTime > 1000) {
+            moe.fuqiuluo.xposed.utils.FakeLoc.readConfigFromFile()
+            lastQueryTime = now
+        }
+        
+        // Use synchronized FakeLoc state if arguments are default/zero, or always override?
+        // SystemSensorManagerHook passes FakeLoc.speed. If FakeLoc is updated, the arg is updated.
+        // BUT FakeLoc in this process (App) is updated by the readConfigFromFile above.
+        // So the passed `currentSpeed` comes from `FakeLoc` (in SystemSensorManagerHook).
+        // Since we update FakeLoc right here, the next call will likely use updated values.
+        // However, SystemSensorManagerHook reads FakeLoc.speed BEFORE calling this. 
+        // So the update here applies to the NEXT frame. That is fine. 1s latency is acceptable.
+        
+        // Refetch local state in case it was updated by readConfigFromFile
+        val localSpeed = moe.fuqiuluo.xposed.utils.FakeLoc.speed
+        val localHeading = moe.fuqiuluo.xposed.utils.FakeLoc.bearing
+        
+        val isMoving = localSpeed > 0.5
         if (isMoving != wasMoving) {
             // State Changed. Commit steps from previous state.
             val durationInPrevState = now - lastStateChangeTime
@@ -198,8 +213,8 @@ object SensorReplayPlayer {
         val tracks = if (isMoving) walkingTracks else idleTracks
         
         if (loopDuration == 0L || !tracks.containsKey(sensorType)) {
-            // Fallback for missing sensors
-            return FloatArray(3) 
+            // Fallback for missing sensors: Return empty to allow original values to pass through
+            return FloatArray(0) 
         }
 
         val timeSinceStateStart = now - lastStateChangeTime
@@ -235,7 +250,8 @@ object SensorReplayPlayer {
             // To go South(180) -> East(90): -90 deg change on compass.
             // In Carthesian: -Y -> +X. +90 deg change (CCW).
             // So theta = -delta.
-            val deltaDegrees = currentHeading - WALKING_BASE_HEADING
+            // So theta = -delta.
+            val deltaDegrees = localHeading - WALKING_BASE_HEADING
             val thetaRad = Math.toRadians(-deltaDegrees)
             
             // Anti-Pattern: Amplitude Modulation

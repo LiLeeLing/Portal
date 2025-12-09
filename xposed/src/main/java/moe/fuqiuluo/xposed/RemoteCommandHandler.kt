@@ -75,6 +75,7 @@ object RemoteCommandHandler {
                 FakeLoc.altitude = altitude
                 FakeLoc.accuracy = accuracy
 
+                FakeLoc.syncConfigToFile()
                 return true
             }
             "stop" -> {
@@ -83,6 +84,7 @@ object RemoteCommandHandler {
                 if (isLoadedLibrary) {
                     Dobby.setStatus(false)
                 }
+                FakeLoc.syncConfigToFile()
                 return true
             }
             "is_start" -> {
@@ -137,6 +139,7 @@ object RemoteCommandHandler {
             "set_speed_amp" -> {
                 val speedAmplitude = rely.getDouble("speed_amplitude", 1.0)
                 FakeLoc.speedAmplitude = speedAmplitude
+                FakeLoc.syncConfigToFile()
                 return true
             }
             "set_altitude" -> {
@@ -147,12 +150,14 @@ object RemoteCommandHandler {
             "set_speed" -> {
                 val speed = rely.getDouble("speed", 0.0)
                 FakeLoc.speed = speed
+                FakeLoc.syncConfigToFile()
                 return true
             }
             "set_bearing" -> {
                 val bearing = rely.getDouble("bearing", 0.0)
                 FakeLoc.bearing = bearing
                 FakeLoc.hasBearings = true
+                FakeLoc.syncConfigToFile()
                 return true
             }
             "move" -> {
@@ -168,6 +173,7 @@ object RemoteCommandHandler {
                 }
                 FakeLoc.bearing = bearing
                 FakeLoc.hasBearings = true
+                FakeLoc.syncConfigToFile()
                 return updateCoordinate(newLoc.first, newLoc.second).also {
                     if (FakeLoc.isSystemServerProcess) LocationServiceHook.callOnLocationChanged()
                 }
@@ -243,6 +249,8 @@ object RemoteCommandHandler {
                 FakeLoc.enableNMEA = enableNMEA
                 FakeLoc.disableRequestGeofence = disableRequestGeofence
                 FakeLoc.disableGetFromLocation = disableGetFromLocation
+
+                FakeLoc.syncConfigToFile()
                 return true
             }
             "sync_config" -> {

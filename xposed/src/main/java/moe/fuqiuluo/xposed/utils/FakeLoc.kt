@@ -162,20 +162,59 @@ object FakeLoc {
 
 
 
-    fun calculateBearing(latA: Double, lonA: Double, latB: Double, lonB: Double): Double {
-        val lat1 = Math.toRadians(latA)
-        val lon1 = Math.toRadians(lonA)
-        val lat2 = Math.toRadians(latB)
-        val lon2 = Math.toRadians(lonB)
+    // Cross-Process Sync
+    private const val CONFIG_FILE_PATH = "/data/local/tmp/portal_config.json"
 
-        val deltaLon = lon2 - lon1
+    fun syncConfigToFile() {
+        if (!isSystemServerProcess) return 
+        // Only System Server writes to avoid conflicts (though User might change settings in App UI too? 
+        // Actually App UI talks to RemoteCommandHandler(SystemServer), so System Server is the source of truth.)
+        
+        try {
+            val json = org.json.JSONObject()
+            json.put("enable", enable)
+            json.put("speed", speed)
+            json.put("bearing", bearing)
+            json.put("speedAmplitude", speedAmplitude)
+            json.put("enableMockGnss", enableMockGnss)
+            
+            val file = java.io.File(CONFIG_FILE_PATH)
+            file.writeText(json.toString())
+            // Ensure world readable
+            file.setReadable(true, false)
+            file.setWritable(true, false) 
+        } catch (e: Exception) {
+            // moe.fuqiuluo.xposed.utils.Logger.error("Failed to sync config to file", e)
+        }
+    }
 
-        val y = sin(deltaLon) * cos(lat2)
-        val x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(deltaLon)
+    fun readConfigFromFile() {
+        try {
+            val file = java.io.File(CONFIG_FILE_PATH)
+            if (!file.exists()) return
 
-        var bearing = Math.toDegrees(atan2(y, x))
-        bearing = (bearing + 360) % 360  // 标准化到0-360度
+            val text = file.readText()
+            val json = org.json.JSONObject(text)
 
-        return bearing
+            if (json.has("enable")) enable = json.getBoolean("enable")
+            if (json.has("speed")) speed = json.getDouble("speed")
+            if (json.has("bearing")) {
+                val newBearing = json.getDouble("bearing")
+                // Only update if changed to avoid unnecessary re-calcs?
+                // Actually field setter logic in FakeLoc handles normalisation but not field backing.
+                // We should set the backing field or use setter.
+                // But `bearing` property has no setter in the code snippet, it uses `field`.
+                // Wait, the provided code for FakeLoc showed `bearing` has a getter but no explicit setter in the snippet?
+                // Looking at snippet: `var bearing = 0.0` then `get()`. It implies default setter.
+                // Wait, line 110: `var bearing = 0.0`. Line 111 `get()`. 
+                // Since it's a `var`, it has a setter.
+                bearing = newBearing
+            }
+            if (json.has("speedAmplitude")) speedAmplitude = json.getDouble("speedAmplitude")
+            if (json.has("enableMockGnss")) enableMockGnss = json.getBoolean("enableMockGnss")
+
+        } catch (e: Exception) {
+            // Log?
+        }
     }
 }

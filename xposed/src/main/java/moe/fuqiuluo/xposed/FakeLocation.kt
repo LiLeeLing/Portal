@@ -36,6 +36,8 @@ class FakeLocation: IXposedHookLoadPackage, IXposedHookZygoteInit {
 
 //        // 宇宙安全声明：以下代码仅供学习交流使用，切勿用于非法用途?
 //        System.setProperty("portal.enable", "true")
+
+        SystemSensorManagerHook(null)
     }
 
     /**
@@ -86,7 +88,7 @@ class FakeLocation: IXposedHookLoadPackage, IXposedHookZygoteInit {
                 TelephonyHook.hookSubOnTransact(lpparam.classLoader)
                 WlanHook(systemClassLoader)
                 AndroidFusedLocationProviderHook(lpparam.classLoader)
-                SystemSensorManagerHook(lpparam.classLoader)
+                // SystemSensorManagerHook(lpparam.classLoader)
 
                 ThirdPartyLocationHook(lpparam.classLoader)
             }
