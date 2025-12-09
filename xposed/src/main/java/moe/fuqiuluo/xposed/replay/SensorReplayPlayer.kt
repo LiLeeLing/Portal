@@ -168,6 +168,7 @@ object SensorReplayPlayer {
      * @param currentHeading GPS Bearing (0-360). Used to rotate vectors.
      */
     fun getSensorValues(sensorType: Int, currentSpeed: Double, currentHeading: Double): FloatArray {
+        val now = System.currentTimeMillis()
         if (!isInitialized) return FloatArray(0)
 
         // State Machine Update
