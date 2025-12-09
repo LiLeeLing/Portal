@@ -49,9 +49,15 @@ class FakeLocation: IXposedHookLoadPackage, IXposedHookZygoteInit {
      * @throws Throwable Everything the callback throws is caught and logged.
      */
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam?) {
-        if (lpparam?.packageName != "android" && lpparam?.packageName != "com.android.phone") {
-            return
-        }
+        if (lpparam == null) return
+        
+        // Log all loaded packages for debugging
+        // Logger.info("Loaded package: ${lpparam.packageName}")
+
+        // if (lpparam.packageName != "android" && lpparam.packageName != "com.android.phone") {
+        //    return
+        // }
+
 
         val systemClassLoader = (kotlin.runCatching {
             lpparam.classLoader.loadClass("android.app.ActivityThread")
