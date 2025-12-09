@@ -141,7 +141,7 @@ android {
     }
     packaging {
         jniLibs {
-            useLegacyPackaging = true
+            useLegacyPackaging = false
             excludes += "lib/armeabi/**"
             excludes += "lib/x86/**"
             excludes += "lib/x86_64/libBaiduMapSDK**"
