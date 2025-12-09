@@ -78,13 +78,16 @@ void updateConfig() {
     gLastConfigUpdateTime = now;
 
     std::ifstream file("/data/local/tmp/portal_config.json");
-    if (!file.is_open()) return;
+    if (!file.is_open()) {
+        LOGE("Native Hook: Failed to open config file /data/local/tmp/portal_config.json");
+        return;
+    }
 
     std::stringstream buffer;
     buffer << file.rdbuf();
     std::string content = buffer.str();
 
-    // Simple manual JSON parsing lambda
+    // ... (parsing logic same as before) ...
     auto parseBool = [&](const std::string& key) -> bool {
         size_t pos = content.find("\"" + key + "\"");
         if (pos == std::string::npos) return false;
@@ -95,7 +98,8 @@ void updateConfig() {
         if (content.substr(valueStart, 4) == "true") return true;
         return false;
     };
-
+    
+    // ... (parseDouble logic same as before) ...
     auto parseDouble = [&](const std::string& key) -> double {
         size_t pos = content.find("\"" + key + "\"");
         if (pos == std::string::npos) return 0.0;
@@ -113,25 +117,29 @@ void updateConfig() {
         }
     };
 
-    gEnable = parseBool("enable");
+    bool newEnable = parseBool("enable");
+    if (newEnable != gEnable) {
+        LOGD("Native Hook: State changed to %d", newEnable);
+    }
+    gEnable = newEnable;
     gSpeed = parseDouble("speed");
     gBearing = parseDouble("bearing");
 }
 
 
 int64_t SensorEventQueueWrite(void *tube, void *events, int64_t numEvents) {
-    // This hooks the write to the BitTube. If we want to modify events BEFORE they go to app, this is a good place.
-    // 'events' is an array of ASensorEvent (which is just sensors_event_t).
-    
-    if (enableSensorHook && gEnable && events != nullptr) {
+    if (enableSensorHook && events != nullptr) {
         updateConfig();
-        sensors_event_t* sensorEvents = (sensors_event_t*)events;
         
-        for (int i = 0; i < numEvents; i++) {
-            sensors_event_t& event = sensorEvents[i];
-            
-            // Example: Walking Logic
-            if (event.type == 1) { // Accelerometer
+        if (gEnable) {
+            sensors_event_t* sensorEvents = (sensors_event_t*)events;
+            for (int i = 0; i < numEvents; i++) {
+                sensors_event_t& event = sensorEvents[i];
+                // Log only once per second to avoid spam, or specific heavy debug
+                // LOGD("Native Hook Processing Type: %d", event.type);
+                
+                // Example: Walking Logic
+                if (event.type == 1) { // Accelerometer
                  if (gSpeed > 0.1) {
                      // 1. Basic Rhythm: Freq ~ Speed * 1.4 Hz
                      double freq = gSpeed * 1.4;
