@@ -98,6 +98,12 @@ class FakeLocation: IXposedHookLoadPackage, IXposedHookZygoteInit {
             "android" -> {
                 Logger.info("Debug Log Status: ${FakeLoc.enableDebugLog}")
                 FakeLoc.isSystemServerProcess = true
+                try {
+                    nativeInitHook()
+                    Logger.info("Initialized Native Sensor Hook in System Server")
+                } catch (e: Throwable) {
+                    Logger.error("Failed to initialize Native Sensor Hook", e)
+                }
                 startFakeLocHook(systemClassLoader)
                 TelephonyHook.hookSubOnTransact(lpparam.classLoader)
                 WlanHook(systemClassLoader)
@@ -131,4 +137,6 @@ class FakeLocation: IXposedHookLoadPackage, IXposedHookZygoteInit {
         LocationServiceHook(classLoader)
         LocationManagerHook(cLocationManager)  // intrusive hooks
     }
+
+    external fun nativeInitHook()
 }

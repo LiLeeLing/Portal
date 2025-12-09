@@ -14,8 +14,7 @@ JNI_OnLoad(JavaVM* vm, void* reserved) {
         return JNI_ERR;
     }
 
-    doSensorHook();
-
+    // doSensorHook(); // Moved to explicit call
     return JNI_VERSION_1_6;
 }
 
@@ -23,4 +22,10 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_moe_fuqiuluo_dobby_Dobby_setStatus(JNIEnv *env, jobject thiz, jboolean status) {
     enableSensorHook = status;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_moe_fuqiuluo_xposed_FakeLocation_nativeInitHook(JNIEnv *env, jobject thiz) {
+    doSensorHook();
 }
