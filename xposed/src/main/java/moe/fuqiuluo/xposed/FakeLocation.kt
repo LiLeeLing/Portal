@@ -15,6 +15,7 @@ import moe.fuqiuluo.xposed.hooks.sensor.SystemSensorManagerHook
 import moe.fuqiuluo.xposed.hooks.telephony.TelephonyHook
 import moe.fuqiuluo.xposed.hooks.wlan.WlanHook
 import moe.fuqiuluo.xposed.utils.FakeLoc
+import moe.fuqiuluo.xposed.utils.Logger
 import android.util.Log
 
 class FakeLocation: IXposedHookLoadPackage, IXposedHookZygoteInit {
