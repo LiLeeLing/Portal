@@ -79,7 +79,11 @@ void updateConfig() {
 
     std::ifstream file("/data/local/tmp/portal_config.json");
     if (!file.is_open()) {
-        LOGE("Native Hook: Failed to open config file /data/local/tmp/portal_config.json");
+        static bool loggedError = false;
+        if (!loggedError) {
+             LOGE("Native Hook: Failed to open config file /data/local/tmp/portal_config.json");
+             loggedError = true;
+        }
         return;
     }
 
@@ -87,7 +91,6 @@ void updateConfig() {
     buffer << file.rdbuf();
     std::string content = buffer.str();
 
-    // ... (parsing logic same as before) ...
     auto parseBool = [&](const std::string& key) -> bool {
         size_t pos = content.find("\"" + key + "\"");
         if (pos == std::string::npos) return false;
@@ -98,8 +101,7 @@ void updateConfig() {
         if (content.substr(valueStart, 4) == "true") return true;
         return false;
     };
-    
-    // ... (parseDouble logic same as before) ...
+
     auto parseDouble = [&](const std::string& key) -> double {
         size_t pos = content.find("\"" + key + "\"");
         if (pos == std::string::npos) return 0.0;
@@ -135,102 +137,71 @@ int64_t SensorEventQueueWrite(void *tube, void *events, int64_t numEvents) {
             sensors_event_t* sensorEvents = (sensors_event_t*)events;
             for (int i = 0; i < numEvents; i++) {
                 sensors_event_t& event = sensorEvents[i];
-                // Log only once per second to avoid spam, or specific heavy debug
-                // LOGD("Native Hook Processing Type: %d", event.type);
                 
-                // Example: Walking Logic
+                // Debug log for first event of batch to confirm hook is active
+                if (i == 0) {
+                   // LOGD("Native Hook: Processing batch of %ld events. First Type: %d", numEvents, event.type);
+                }
+
                 if (event.type == 1) { // Accelerometer
-                 if (gSpeed > 0.1) {
-                     // 1. Basic Rhythm: Freq ~ Speed * 1.4 Hz
-                     double freq = gSpeed * 1.4;
-                     
-                     // 2. Anti-ML: Add Randomness & Harmonics
-                     // Use timestamp for phase to ensure continuity
-                     double t = event.timestamp / 1000000000.0;
-                     double phase = t * freq * 2 * M_PI;
-                     
-                     // Pseudo-random jitter based on time (milliseconds part) prevents perfect periodicity
-                     // Modulo 97 is just a prime number to scramble modulation
-                     double jitter = ((event.timestamp / 1000000) % 97) / 100.0; // 0.0 to 0.96
-                     
-                     // Z-axis: Gravity (9.8) + Main Step Wave + 2nd Harmonic (Asymmetry) + Noise
-                     // Harmonic: 0.3 * sin(2*phase) makes the 'step' impact sharper than the 'lift'
-                     double baseWave = 2.0 * sin(phase) + 0.5 * sin(2 * phase + 0.5);
-                     double noise = 0.2 * jitter; // High freq noise
-                     
-                     event.acceleration.x = (float)(sin(phase * 0.5) * 0.5 + noise); // Lateral Sway
-                     event.acceleration.y = (float)(cos(phase * 0.5) * 0.3);         // Forward/Back adjustments
-                     event.acceleration.z = (float)(9.8 + baseWave + noise);         // Vertical Impact
-                 }
-            }
-            else if (event.type == 2) { // Magnetic Field
-                 if (gEnable) { // Always override if enabled, even if static
-                     // 1. Calculate Field Vector from Bearing
-                     // North = 0 deg. Vector (0, 1, 0) in simplified Map mapping? 
-                     // Usually Mag points North. If User Bearing is 90 (East), Phone is facing East.
-                     // So North is relative to Phone: -90 deg.
-                     // Mag Vector Local = Rotate(World_North, -Bearing)
-                     
-                     double bearingRad = gBearing * M_PI / 180.0;
-                     // World North is typically Y+ or Z- depending on location. Let's assume ideal Flat Earth Y+.
-                     // Local X = sin(-bearing) * MagStrength
-                     // Local Y = cos(-bearing) * MagStrength
-                     
-                     double magStrength = 40.0; // uT
-                     double jitter = ((event.timestamp / 1000000) % 97) / 1000.0;
-                     
-                     // Add subtle oscillation from walking (Body Sway impacts heading slightly)
-                     double sway = 0.0;
                      if (gSpeed > 0.1) {
                          double freq = gSpeed * 1.4;
                          double t = event.timestamp / 1000000000.0;
-                         sway = sin(t * freq * 0.5) * 0.05; // +/- 0.05 rad sway
+                         double phase = t * freq * 2 * M_PI;
+                         double jitter = ((event.timestamp / 1000000) % 97) / 100.0;
+                         
+                         double baseWave = 2.0 * sin(phase) + 0.5 * sin(2 * phase + 0.5);
+                         double noise = 0.2 * jitter;
+                         
+                         event.acceleration.x = (float)(sin(phase * 0.5) * 0.5 + noise);
+                         event.acceleration.y = (float)(cos(phase * 0.5) * 0.3);
+                         event.acceleration.z = (float)(9.8 + baseWave + noise);
                      }
-                     
-                     double localBearing = -bearingRad + sway + jitter;
-                     
-                     event.magnetic.x = (float)(magStrength * sin(localBearing));
-                     event.magnetic.y = (float)(magStrength * cos(localBearing));
-                     event.magnetic.z = (float)(-30.0 + jitter); // Vertical component (Dip)
-                 }
+                }
+                else if (event.type == 2) { // Magnetic Field
+                     if (gEnable) {
+                         double bearingRad = gBearing * M_PI / 180.0;
+                         double magStrength = 40.0;
+                         double jitter = ((event.timestamp / 1000000) % 97) / 1000.0;
+                         double sway = 0.0;
+                         if (gSpeed > 0.1) {
+                             double freq = gSpeed * 1.4;
+                             double t = event.timestamp / 1000000000.0;
+                             sway = sin(t * freq * 0.5) * 0.05;
+                         }
+                         double localBearing = -bearingRad + sway + jitter;
+                         
+                         event.magnetic.x = (float)(magStrength * sin(localBearing));
+                         event.magnetic.y = (float)(magStrength * cos(localBearing));
+                         event.magnetic.z = (float)(-30.0 + jitter);
+                     }
+                }
+                else if (event.type == 4) { // Gyroscope
+                     if (gSpeed > 0.1) {
+                         double freq = gSpeed * 1.4;
+                         double omega = freq * 0.5 * 2 * M_PI;
+                         double t = event.timestamp / 1000000000.0;
+                         double amplitude = 0.05;
+                         double yawRate = amplitude * omega * cos(omega * t);
+                         double jitter = ((event.timestamp / 1000000) % 53) / 1000.0;
+                         
+                         event.gyro.x = (float)(jitter); 
+                         event.gyro.y = (float)(jitter);
+                         event.gyro.z = (float)(yawRate + jitter);
+                     }
+                }
+                else if (event.type == 19) { // Step Counter
+                     if (gStartTimestamp == 0) gStartTimestamp = getCurrentTimeMs();
+                     double durationSec = (getCurrentTimeMs() - gStartTimestamp) / 1000.0;
+                     if (gSpeed > 0.1) {
+                        gVirtualSteps = (uint64_t)(durationSec * gSpeed * 1.4);
+                     }
+                     event.step_counter = gVirtualSteps;
+                } 
+                else if (event.type == 18) { // Step Detector
+                     if (gSpeed > 0.5) event.data[0] = 1.0f;
+                }
             }
-            else if (event.type == 4) { // Gyroscope
-                 if (gSpeed > 0.1) {
-                     // Gyro measures d(Angle)/dt.
-                     // Our Heading Sway is sin(w*t). Derivative is w*cos(w*t).
-                     double freq = gSpeed * 1.4; // rad/s of step cycle? No, Hz.
-                     double omega = freq * 0.5 * 2 * M_PI; // Sway frequency (half step)
-                     
-                     double t = event.timestamp / 1000000000.0;
-                     // Sway = A * sin(omega * t)
-                     // Gyro Z (Yaw rate) = A * omega * cos(omega * t)
-                     
-                     double amplitude = 0.05; // rad
-                     double yawRate = amplitude * omega * cos(omega * t);
-                     
-                     double jitter = ((event.timestamp / 1000000) % 53) / 1000.0;
-                     
-                     event.gyro.x = (float)(jitter); 
-                     event.gyro.y = (float)(jitter);
-                     event.gyro.z = (float)(yawRate + jitter);
-                 }
-            }
-            else if (event.type == 19) { // Step Counter
-                 if (gStartTimestamp == 0) {
-                     gStartTimestamp = getCurrentTimeMs();
-                 }
-                 double durationSec = (getCurrentTimeMs() - gStartTimestamp) / 1000.0;
-                 if (gSpeed > 0.1) {
-                    // Simple linear accumulation: 1m/s ~= 1.4 steps/s
-                    gVirtualSteps = (uint64_t)(durationSec * gSpeed * 1.4);
-                 }
-                 event.step_counter = gVirtualSteps;
-                 // LOGD("Native Hook: Overwrote Step Counter to %ld", gVirtualSteps);
-            } 
-            else if (event.type == 18) { // Step Detector
-                 if (gSpeed > 0.5) event.data[0] = 1.0f;
-            }
-            // Add other sensors here if needed, keeping in mind this is GLOBAL for all apps.
         }
     }
     return OriginalSensorEventQueueWrite(tube, events, numEvents);
@@ -238,32 +209,22 @@ int64_t SensorEventQueueWrite(void *tube, void *events, int64_t numEvents) {
 
 void ConvertToSensorEvent(void *src, void *dst) {
     OriginalConvertToSensorEvent(src, dst);
-    // This function converts internal Event format to sensors_event_t. 
-    // It's often used inside the service before writing to the queue.
-    // Hooking 'write' above is usually sufficient and safer as it handles the final buffer.
-    // We keep this hook minimal or remove it to avoid double-processing.
 }
 
 void doSensorHook() {
     SandHook::ElfImg sensorService(LIBSF_PATH);
-
     if (!sensorService.isValid()) {
         LOGE("failed to load libsensorservice");
         return;
     }
-
-    // Hook SensorEventQueue::write
     auto sensorWrite = sensorService.getSymbolAddress<void*>("_ZN7android16SensorEventQueue5writeERKNS_2spINS_7BitTubeEEEPK12ASensorEventm");
     if (sensorWrite == nullptr) {
         sensorWrite = sensorService.getSymbolAddress<void*>("_ZN7android16SensorEventQueue5writeERKNS_2spINS_7BitTubeEEEPK12ASensorEventj");
     }
-
     if (sensorWrite != nullptr) {
         LOGD("Dobby SensorEventQueue::write found at %p", sensorWrite);
         OriginalSensorEventQueueWrite = (OriginalSensorEventQueueWriteType)InlineHook(sensorWrite, (void *)SensorEventQueueWrite);
     } else {
         LOGE("Failed to find SensorEventQueue::write");
     }
-    
-    // Optional: Hook convertToSensorEvent if needed, but 'write' is better for modifying outgoing data.
 }
