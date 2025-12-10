@@ -141,4 +141,4 @@ class FakeLocation: IXposedHookLoadPackage, IXposedHookZygoteInit {
     companion object {
         var instance: FakeLocation? = null
     }
-
+}
