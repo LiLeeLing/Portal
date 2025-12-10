@@ -98,6 +98,8 @@ class FakeLocation: IXposedHookLoadPackage, IXposedHookZygoteInit {
                 try {
                     // Ensure library is loaded in System Server process
                     System.loadLibrary("portal")
+                    // Enable the native hook master switch
+                    moe.fuqiuluo.dobby.Dobby.setStatus(true)
                     nativeInitHook()
                     Logger.info("Initialized Native Sensor Hook in System Server")
                 } catch (e: Throwable) {

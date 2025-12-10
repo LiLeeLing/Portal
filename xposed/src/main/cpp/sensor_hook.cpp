@@ -234,6 +234,7 @@ void ConvertToSensorEvent(void *src, void *dst) {
 }
 
 void doSensorHook() {
+    LOGD("Native Hook: doSensorHook() called");
     SandHook::ElfImg sensorService(LIBSF_PATH);
     if (!sensorService.isValid()) {
         LOGE("failed to load libsensorservice");
@@ -246,6 +247,11 @@ void doSensorHook() {
     if (sensorWrite != nullptr) {
         LOGD("Dobby SensorEventQueue::write found at %p", sensorWrite);
         OriginalSensorEventQueueWrite = (OriginalSensorEventQueueWriteType)InlineHook(sensorWrite, (void *)SensorEventQueueWrite);
+        if (OriginalSensorEventQueueWrite != nullptr) {
+            LOGD("Native Hook: Successfully hooked SensorEventQueue::write, original at %p", OriginalSensorEventQueueWrite);
+        } else {
+            LOGE("Native Hook: InlineHook returned null for SensorEventQueue::write");
+        }
     } else {
         LOGE("Failed to find SensorEventQueue::write");
     }
