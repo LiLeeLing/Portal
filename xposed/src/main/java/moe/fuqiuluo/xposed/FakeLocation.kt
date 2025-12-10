@@ -96,6 +96,8 @@ class FakeLocation: IXposedHookLoadPackage, IXposedHookZygoteInit {
                 Logger.info("Debug Log Status: ${FakeLoc.enableDebugLog}")
                 FakeLoc.isSystemServerProcess = true
                 try {
+                    // Ensure library is loaded in System Server process
+                    System.loadLibrary("portal")
                     nativeInitHook()
                     Logger.info("Initialized Native Sensor Hook in System Server")
                 } catch (e: Throwable) {
